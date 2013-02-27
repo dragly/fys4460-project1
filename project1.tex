@@ -38,6 +38,10 @@ Taking the gradient of the potential gives us the force as
 
 \section{Implementation}
 
+\subsection{Loading and saving states}
+
+The different time steps are saved to binary files which later are read to continue a simulation or to analyze a simulation.
+
 \subsection{Initial velocities and temperature}
 
 To mimic a given temperature upon starting the system, we select speeds from a Boltzmann distribution, meaning that the x-, y- and z-components of the velocity have zero mean and standard deviation $\sqrt{k_{B}T / m}$.
@@ -99,21 +103,34 @@ To make use of this, we implement neighbor cells\footnote{Neighbor cells are gen
 
 From figure \ref{fig:energy-fluctuations} we see that the energy fluctuations do not vary much with time step, at least not in terms of frequency nor magnitude. However, figure \ref{fig:energy-fluctuations}b indicates that any larger time step than this would cause errors since the frequency of time steps would be smaller than the frequency of the fluctuations. In fact it does, and tests show that larger time steps yield non-conserved energies, as shown in figure \ref{fig:energy-fluctuations-larger}.
 
-\begin{figure}
+\begin{figure*}
   \centering
   \includegraphics[width=0.48\textwidth]{./analysis/1j-energy/runs/2013-02-25_140300/energy-0006.pdf}
   \caption{Kinetic energy for a large time step $\Delta t = 6.7 \cdot 10^{-14} \unit{s}$. We clearly see that the energy diverges - a feature not shown for smaller time steps.}
   \label{fig:energy-fluctuations-larger}
-\end{figure}
+\end{figure*}
+
+\section{Impact of thermostats}
+
+\begin{figure*}
+  \centering
+  \includegraphics[width=0.48\textwidth]{./analysis/1l-pressure/runs/2013-02-25_193215/pressure-vs-temperature1_00.pdf}
+  \caption{Evolution of pressure and temperature under the use of a thermostat. Here we are completely missing the phase change at about $300 \unit{K}$.}
+  \label{fig:pressure-vs-temperature-thermostat}
+\end{figure*}
+
+Even though the thermostats are very useful to make the transition to new temperatures smooth and easy, they introduce some nasty unphysical behavior. For instance, it is not a good idea to slowly tune the temperature while measuring the pressure to spot phase changes. One example of this is shown in figure \ref{fig:pressure-vs-temperature-thermostat}.
+
+The effect of the Berendsen and Andersen thermostats on the apparent behavior of the system (as visualized in Ovito) do differ in the way the atoms bounce around. The Berendsen thermostat appears more ``soft'' in its effect on the atoms, while the Andersen thermostat causes more rapid changes in individual atom behavior. This is likely because the Berendsen thermostat affects all atoms at once, while the Andersen thermostat tunes the temperature by picking a few lucky atoms at random.
 
 \subsection{Temperature evolution}
 
-\begin{figure}
+\begin{figure*}
   \centering
   \includegraphics[width=0.48\textwidth]{./analysis/1k-temperature/runs/2013-02-25_182713/systemsize0009/temperature-start.pdf}
-  \caption{Kinetic energy for a large time step $\Delta t = 6.7 \cdot 10^{-14} \unit{s}$. We clearly see that the energy diverges - a feature not shown for smaller time steps.}
+  \caption{Temperature as function of time. We see that the temperature drops drastically from the initial temperature before settling at something that balances kinetic and potential energy.}
   \label{fig:temperature-evolution}
-\end{figure}
+\end{figure*}
 
 If we start the system at $T = 300 \unit{K}$ in a perfect fcc grid, we won't stay at this temperature throughout the run. The reason is that the potential energy is practically zero in an fcc grid. We see this effect in figure \ref{fig:temperature-evolution}.
 
@@ -132,7 +149,74 @@ If we start the system at $T = 300 \unit{K}$ in a perfect fcc grid, we won't sta
     \label{fig:temperature-fluctuations}
 \end{figure*}
 
+As expected, we see that the fluctuations in temperature are reduced with system size, as shown in figure \ref{fig:temperature-fluctuations}. This is because a larger system has a smaller deviation in velocities due to its size. Physically we may see this as any outliers more easily being ``squashed'' by the rest of the system when there are more particles available in larger systems rather than small ones.
 
+\subsection{Pressure vs temperature}
+\begin{figure*}
+    \centering
+    \subfigure[~ System size $6 \times 6 \times 6$]{
+	\includegraphics[width=0.48\textwidth]{./analysis/1-equilibrated/runs/2013-02-25_190352/temperature0005/step1/pressure-vs-temperature0_90.pdf}
+    } \label{fig:pressure-vs-temperature-single}
+    \subfigure[~ System size $12 \times 12 \times 12$]{
+        \includegraphics[width=0.48\textwidth]{./analysis/1-equilibrated-fast-zoom/runs/2013-02-25_192649/pressure-vs-temperature-mean.pdf}
+    } \label{fig:pressure-vs-temperature-multiple}
+    % fitness0.pdf: 576x432 pixel, 72dpi, 20.32x15.24 cm, bb=0 0 576 432
+  \caption{Relation between temperature and pressure for a $8 \times 8 \times 8$ lattice (a) within one single system initialized with a thermostat at $400 \unit{K}$) and (b) for systems initialized with multiple different temperatures. In (a) each dot represents a time step while in (b) each dot represents the mean pressure and temperature of one system.}
+  \label{fig:pressure-vs-temperature}
+\end{figure*}
+Within one isolated system, the relation between pressure and temperature is linearly inverse, meaning that the pressure is lowered with higher temperatures. This might be attributed to the fact that we are (for the most part) conserving energy within one isolated system. This is shown in figure \ref{fig:pressure-vs-temperature-single}.
+
+\begin{figure*}
+    \centering
+    \subfigure[~ $292 \unit{K}$, solid]{
+	\includegraphics[width=0.48\textwidth]{./analysis/1-equilibrated-fast-zoom/runs/2013-02-25_192649/temperature0015/step1/visual.png}
+    } \label{fig:phase-visual-solid}
+    \subfigure[~ $330 \unit{K}$, liquid]{
+        \includegraphics[width=0.48\textwidth]{./analysis/1-equilibrated-fast-zoom/runs/2013-02-25_192649/temperature0019/step1/visual.png}
+    } \label{fig:phase-visual-liquid}
+    % fitness0.pdf: 576x432 pixel, 72dpi, 20.32x15.24 cm, bb=0 0 576 432
+  \caption{Visualization of the atoms in an $8 \times 8 \times 8$ system (a) right before and (b) right after the phase change from solid to liquid.}
+  \label{fig:phase-visual}
+\end{figure*}
+
+However, between different systems, we see that the relation such that we get increasing pressure with increasing temperature (which makes sense). We even see a bump right above $300 \unit{K}$ where we are likely encountering a phase change. This claim is backed up by visualizing the atoms in Ovito at $292 \unit{K}$ and $330 \unit{K}$, as seen in figure \ref{fig:phase-visual}.
+
+\subsection{Diffusion}
+
+\begin{figure*}
+    \centering
+    \subfigure[~ $50 \unit{K}$, solid]{
+	\includegraphics[width=0.48\textwidth]{./analysis/1-equilibrated/runs/2013-02-25_190352/temperature0003/step1/displacement.pdf}
+    } \label{fig:displacement-solid}
+    \subfigure[~ $400 \unit{K}$, liquid]{
+        \includegraphics[width=0.48\textwidth]{./analysis/1-equilibrated/runs/2013-02-25_190352/temperature0005/step1/displacement.pdf}
+    } \label{fig:displacement-liquid}
+    % fitness0.pdf: 576x432 pixel, 72dpi, 20.32x15.24 cm, bb=0 0 576 432
+  \caption{Displacement as function of time for (a) a solid system and (b) liquid.}
+  \label{fig:displacement}
+\end{figure*}
+
+The displacement as function of time is shown in figure \ref{fig:displacement} for solid and liquid systems. We see that there is clearly no displacement in the solid system on average, while there is a definite trend in the liquid system.
+
+From the relation $\langle r^2(t) \rangle = 6Dt$ (when $t \to \infty$) we find the approximated diffusion constant as
+\begin{equation}
+  D = 4.5847 \cdot 10^{-9} \unit{m^{2}}
+\end{equation} 
+
+\subsection{Radial distribution}
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=0.8\textwidth]{./analysis/1-equilibrated/runs/2013-02-25_190352/radial-distribution.pdf}
+    \caption{Radial distribution at different temperatures.}
+    \label{fig:radial-distribution}
+\end{figure*}
+
+The radial distribution gives an indication of the mean atomic density within spherical shells around the atoms.
+This differs greatly between solid and liquid states. 
+A plot of the radial distribution is shown in figure \ref{fig:radial-distribution}. Evidently the radial distribution at low temperatures ($10 \unit{K}$) reveals the periodic structure in the solid. At higher temperatures the structure is still visible, yet a bit smoothed. 
+his is because there is more motion in the system which smooths out the exact locations of the atoms. 
+For higher temperatures ($800 \unit{K}$) there is apparently no such fine structure, although we may observe that it is more likely for atoms to appear close to others, indicating some temporary binding.
 
 % \begin{figure}
 %  \centering
@@ -153,7 +237,8 @@ If we start the system at $T = 300 \unit{K}$ in a perfect fcc grid, we won't sta
 
 \appendix
 
-\section{Conversion to atomic units}
+% \section{Conversion to atomic units}
+
 
 \bibliographystyle{abbrvnat}
 \bibliography{references}
